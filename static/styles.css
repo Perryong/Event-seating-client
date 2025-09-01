@@ -1,0 +1,89 @@
+/* Shared dark theme overrides for better contrast and readability */
+
+:root,
+html[data-bs-theme="dark"] {
+    /* Base surface colors */
+    --surface-0: #0f1220;          /* page background */
+    --surface-1: #14182a;          /* cards/sections */
+    --surface-2: #1b2140;          /* headers/hero */
+
+    /* Brand accents with WCAG contrast */
+    --brand-primary: #6ea8fe;      /* accessible blue */
+    --brand-primary-strong: #3d8bfd;
+    --brand-secondary: #c29ffa;    /* soft purple */
+    --brand-success: #3fbf88;      /* green */
+    --brand-warning: #f0ad4e;
+    --brand-danger: #ff6b6b;
+
+    /* Text */
+    --text-strong: #f6f7fb;
+    --text-muted-strong: #c5c9d6;
+
+    /* Borders */
+    --border-strong: #2a3359;
+}
+
+body {
+    background-color: var(--surface-0);
+    color: var(--text-strong);
+}
+
+.card,
+.modal-content,
+.offcanvas,
+.dropdown-menu {
+    background-color: var(--surface-1);
+    border-color: var(--border-strong);
+}
+
+.card-header,
+.hero-section {
+    background: linear-gradient(135deg, var(--surface-2), #232b4d);
+    border-bottom: 1px solid var(--border-strong);
+}
+
+.btn-primary {
+    background-color: var(--brand-primary-strong);
+    border-color: var(--brand-primary-strong);
+}
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--brand-primary);
+    border-color: var(--brand-primary);
+}
+
+.text-primary { color: var(--brand-primary) !important; }
+.text-info { color: #66d9ff !important; }
+.text-success { color: var(--brand-success) !important; }
+
+.badge.bg-warning { color: #1a1a1a; }
+
+/* Inputs */
+.form-control,
+.form-select {
+    background-color: #0e1326;
+    border-color: var(--border-strong);
+    color: var(--text-strong);
+}
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 .2rem rgba(61, 139, 253, 0.25);
+}
+
+/* Utility contrasts */
+.seating-card.found {
+    border-color: var(--brand-success) !important;
+    background: rgba(63, 191, 136, 0.08) !important;
+}
+
+.connection-status {
+    background-color: #1e2547;
+    border: 1px solid var(--border-strong);
+}
+
+/* Links in dark */
+a { color: var(--brand-primary); }
+a:hover { color: var(--brand-primary-strong); }
+
+

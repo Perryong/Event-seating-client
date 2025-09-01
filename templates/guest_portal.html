@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wedding Guest Portal</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+        }
+        .seating-card {
+            border: 2px solid var(--bs-border-color);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+        .seating-card.found {
+            border-color: var(--bs-success);
+            background: var(--bs-success-bg-subtle);
+        }
+        .table-mates {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .guest-badge {
+            font-size: 0.875rem;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+        .status-checked-in {
+            background-color: var(--bs-success);
+        }
+        .status-not-checked-in {
+            background-color: var(--bs-warning);
+        }
+        .connection-status {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1050;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Connection Status Indicator -->
+    <div id="connectionStatus" class="connection-status bg-secondary text-white" style="display: none;">
+        <i class="fas fa-wifi"></i> <span id="connectionText">Connecting...</span>
+    </div>
+
+    <div class="container py-4">
+        <!-- Hero Section -->
+        <div class="hero-section p-4 text-center">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-heart text-danger"></i>
+                Wedding Guest Portal
+            </h1>
+            <p class="lead mb-0">Find your table and check in for the celebration!</p>
+        </div>
+
+        <!-- Guest Lookup Form -->
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-search"></i>
+                            Find Your Seat
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="lookupForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="eventCode" class="form-label">Event Code</label>
+                                    <input type="text" class="form-control" id="eventCode" placeholder="Enter event code" required>
+                                    <div class="form-text">Scan the QR code or enter the event code provided</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="guestName" class="form-label">Your Name</label>
+                                    <input type="text" class="form-control" id="guestName" placeholder="Enter your full name" required>
+                                    <div class="form-text">Enter your name as it appears on the guest list</div>
+                                </div>
+                            </div>
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="button" class="btn btn-outline-secondary me-md-2" id="clearBtn">
+                                    <i class="fas fa-times"></i> Clear
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="lookupBtn">
+                                    <i class="fas fa-search"></i> Find My Seat
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="text-center py-4" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Looking up your seating information...</p>
+        </div>
+
+        <!-- Error Messages -->
+        <div id="errorAlert" class="alert alert-danger alert-dismissible" role="alert" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="errorMessage"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Success Messages -->
+        <div id="successAlert" class="alert alert-success alert-dismissible" role="alert" style="display: none;">
+            <i class="fas fa-check-circle"></i>
+            <span id="successMessage"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Seating Information -->
+        <div id="seatingInfo" style="display: none;">
+            <div class="row">
+                <!-- Guest Information Card -->
+                <div class="col-lg-6 mb-4">
+                    <div class="seating-card card h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h4 class="card-title mb-0">
+                                <i class="fas fa-user"></i>
+                                Your Seating Information
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6 mb-3">
+                                    <div class="border rounded p-3">
+                                        <i class="fas fa-table text-primary fs-2 mb-2"></i>
+                                        <h5 class="mb-1">Table</h5>
+                                        <span class="h3 text-primary" id="guestTable">-</span>
+                                    </div>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <div class="border rounded p-3">
+                                        <i class="fas fa-chair text-primary fs-2 mb-2"></i>
+                                        <h5 class="mb-1">Seat</h5>
+                                        <span class="h3 text-primary" id="guestSeat">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Guest Name:</h6>
+                                <span class="fw-bold" id="confirmedName">-</span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Dietary Preferences:</h6>
+                                <span class="badge bg-secondary" id="dietaryInfo">None</span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Check-in Status:</h6>
+                                <span id="checkinStatus" class="badge bg-warning">Not Checked In</span>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="button" class="btn btn-success" id="checkinBtn">
+                                    <i class="fas fa-check"></i> Check In Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Mates Card -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h4 class="card-title mb-0">
+                                <i class="fas fa-users"></i>
+                                Your Table Mates
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            <div id="tableMatesContainer" class="table-mates">
+                                <p class="text-muted text-center py-3">
+                                    <i class="fas fa-users fa-2x mb-2"></i><br>
+                                    Table mate information will appear here
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Updates Section -->
+        <div id="liveUpdates" class="card mt-4" style="display: none;">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-broadcast-tower pulse text-success"></i>
+                    Live Updates
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="updatesContainer" style="max-height: 200px; overflow-y: auto;">
+                    <p class="text-muted text-center">Waiting for live updates...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        class WeddingGuestPortal {
+            constructor() {
+                this.eventCode = null;
+                this.guestName = null;
+                this.websocket = null;
+                this.isCheckedIn = false;
+                
+                this.initializeEventListeners();
+                this.loadEventCodeFromURL();
+            }
+            
+            initializeEventListeners() {
+                // Form submission
+                document.getElementById('lookupForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.lookupGuest();
+                });
+                
+                // Clear button
+                document.getElementById('clearBtn').addEventListener('click', () => {
+                    this.clearForm();
+                });
+                
+                // Check-in button
+                document.getElementById('checkinBtn').addEventListener('click', () => {
+                    this.checkInGuest();
+                });
+            }
+            
+            loadEventCodeFromURL() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const eventParam = urlParams.get('event');
+                if (eventParam) {
+                    document.getElementById('eventCode').value = eventParam;
+                    this.eventCode = eventParam;
+                }
+            }
+            
+            async lookupGuest() {
+                const eventCode = document.getElementById('eventCode').value.trim();
+                const guestName = document.getElementById('guestName').value.trim();
+                
+                if (!eventCode || !guestName) {
+                    this.showError('Please enter both event code and your name');
+                    return;
+                }
+                
+                this.eventCode = eventCode;
+                this.guestName = guestName;
+                
+                this.showLoading(true);
+                this.hideError();
+                this.hideSuccess();
+                
+                try {
+                    const response = await fetch('/guest/lookup', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            public_code: eventCode,
+                            name: guestName
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        this.displaySeatingInfo(result.data);
+                        this.connectWebSocket();
+                        this.showSuccess('Seating information found!');
+                    } else {
+                        this.showError(result.message || 'Guest not found. Please check your name spelling.');
+                    }
+                } catch (error) {
+                    console.error('Lookup error:', error);
+                    this.showError('Unable to connect to the server. Please try again.');
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+            
+            async checkInGuest() {
+                if (!this.eventCode || !this.guestName) {
+                    this.showError('Please look up your seating information first');
+                    return;
+                }
+                
+                if (this.isCheckedIn) {
+                    this.showError('You are already checked in!');
+                    return;
+                }
+                
+                const checkinBtn = document.getElementById('checkinBtn');
+                const originalText = checkinBtn.innerHTML;
+                checkinBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking In...';
+                checkinBtn.disabled = true;
+                
+                try {
+                    const response = await fetch('/guest/checkin', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            public_code: this.eventCode,
+                            name: this.guestName
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        this.updateCheckinStatus(true);
+                        this.showSuccess(result.message);
+                    } else {
+                        this.showError(result.message || 'Check-in failed. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Check-in error:', error);
+                    this.showError('Unable to check in. Please try again.');
+                } finally {
+                    checkinBtn.innerHTML = originalText;
+                    checkinBtn.disabled = false;
+                }
+            }
+            
+            displaySeatingInfo(data) {
+                // Update guest information
+                document.getElementById('confirmedName').textContent = data.guest_name;
+                document.getElementById('guestTable').textContent = data.table_name;
+                document.getElementById('guestSeat').textContent = data.seat_no;
+                document.getElementById('dietaryInfo').textContent = data.dietary || 'None';
+                
+                this.updateCheckinStatus(data.checked_in);
+                
+                // Display table mates
+                this.displayTableMates(data.table_mates);
+                
+                // Show seating info section
+                document.getElementById('seatingInfo').style.display = 'block';
+                document.getElementById('liveUpdates').style.display = 'block';
+                
+                // Add found class to seating card
+                document.querySelector('.seating-card').classList.add('found');
+            }
+            
+            displayTableMates(tableMates) {
+                const container = document.getElementById('tableMatesContainer');
+                
+                if (!tableMates || tableMates.length === 0) {
+                    container.innerHTML = `
+                        <p class="text-muted text-center py-3">
+                            <i class="fas fa-user fa-2x mb-2"></i><br>
+                            You're the only one at this table so far!
+                        </p>
+                    `;
+                    return;
+                }
+                
+                const sortedMates = tableMates.sort((a, b) => a.seat_no - b.seat_no);
+                
+                container.innerHTML = sortedMates.map(mate => `
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div>
+                            <div class="fw-bold">${mate.name}</div>
+                            <small class="text-muted">
+                                <i class="fas fa-chair"></i> Seat ${mate.seat_no}
+                                ${mate.dietary && mate.dietary !== 'none' ? `• ${mate.dietary}` : ''}
+                            </small>
+                        </div>
+                        <div>
+                            <span class="status-indicator ${mate.checked_in ? 'status-checked-in' : 'status-not-checked-in'}"></span>
+                            <span class="guest-badge badge ${mate.checked_in ? 'bg-success' : 'bg-warning'}">
+                                ${mate.checked_in ? 'Checked In' : 'Not Yet'}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            updateCheckinStatus(checkedIn) {
+                this.isCheckedIn = checkedIn;
+                const statusElement = document.getElementById('checkinStatus');
+                const checkinBtn = document.getElementById('checkinBtn');
+                
+                if (checkedIn) {
+                    statusElement.textContent = 'Checked In';
+                    statusElement.className = 'badge bg-success';
+                    checkinBtn.innerHTML = '<i class="fas fa-check-circle"></i> Already Checked In';
+                    checkinBtn.disabled = true;
+                    checkinBtn.className = 'btn btn-outline-success';
+                } else {
+                    statusElement.textContent = 'Not Checked In';
+                    statusElement.className = 'badge bg-warning';
+                    checkinBtn.innerHTML = '<i class="fas fa-check"></i> Check In Now';
+                    checkinBtn.disabled = false;
+                    checkinBtn.className = 'btn btn-success';
+                }
+            }
+            
+            connectWebSocket() {
+                if (this.websocket) {
+                    this.websocket.close();
+                }
+                
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/events/${this.eventCode}`;
+                
+                this.websocket = new WebSocket(wsUrl);
+                
+                this.websocket.onopen = () => {
+                    console.log('WebSocket connected');
+                    this.updateConnectionStatus('connected', 'Connected');
+                };
+                
+                this.websocket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        this.handleWebSocketMessage(data);
+                    } catch (error) {
+                        console.error('Error parsing WebSocket message:', error);
+                    }
+                };
+                
+                this.websocket.onclose = () => {
+                    console.log('WebSocket disconnected');
+                    this.updateConnectionStatus('disconnected', 'Disconnected');
+                    
+                    // Attempt to reconnect after 5 seconds
+                    setTimeout(() => {
+                        if (this.eventCode) {
+                            this.connectWebSocket();
+                        }
+                    }, 5000);
+                };
+                
+                this.websocket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    this.updateConnectionStatus('error', 'Connection Error');
+                };
+            }
+            
+            handleWebSocketMessage(data) {
+                console.log('WebSocket message:', data);
+                
+                switch (data.type) {
+                    case 'connection':
+                        this.addLiveUpdate(`Connected to ${data.message}`, 'info');
+                        break;
+                        
+                    case 'checkin':
+                        this.addLiveUpdate(
+                            `${data.guest.name} just checked in at Table ${data.guest.table_name}!`, 
+                            'success'
+                        );
+                        
+                        // Update table mates display if it's someone at our table
+                        this.refreshTableMatesStatus();
+                        break;
+                        
+                    case 'seating_update':
+                    case 'seating_uploaded':
+                        this.addLiveUpdate('Seating arrangement has been updated', 'warning');
+                        // Could trigger a refresh of seating info
+                        break;
+                        
+                    case 'guest_updated':
+                        this.addLiveUpdate(
+                            `Guest information updated for ${data.guest.name}`, 
+                            'info'
+                        );
+                        break;
+                        
+                    case 'pong':
+                        // Handle heartbeat response
+                        break;
+                }
+            }
+            
+            addLiveUpdate(message, type = 'info') {
+                const container = document.getElementById('updatesContainer');
+                const timestamp = new Date().toLocaleTimeString();
+                
+                const iconMap = {
+                    'success': 'fas fa-check-circle text-success',
+                    'warning': 'fas fa-exclamation-triangle text-warning',
+                    'error': 'fas fa-times-circle text-danger',
+                    'info': 'fas fa-info-circle text-info'
+                };
+                
+                const icon = iconMap[type] || iconMap['info'];
+                
+                const updateElement = document.createElement('div');
+                updateElement.className = 'border-bottom py-2';
+                updateElement.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="${icon}"></i>
+                            <span class="ms-2">${message}</span>
+                        </div>
+                        <small class="text-muted">${timestamp}</small>
+                    </div>
+                `;
+                
+                // Remove placeholder text if it exists
+                const placeholder = container.querySelector('.text-muted.text-center');
+                if (placeholder) {
+                    placeholder.remove();
+                }
+                
+                // Add new update at the top
+                container.insertBefore(updateElement, container.firstChild);
+                
+                // Limit to 10 updates
+                while (container.children.length > 10) {
+                    container.removeChild(container.lastChild);
+                }
+            }
+            
+            refreshTableMatesStatus() {
+                // Re-fetch guest information to update table mates status
+                if (this.eventCode && this.guestName) {
+                    setTimeout(() => {
+                        this.lookupGuest();
+                    }, 1000);
+                }
+            }
+            
+            updateConnectionStatus(status, text) {
+                const statusElement = document.getElementById('connectionStatus');
+                const textElement = document.getElementById('connectionText');
+                
+                statusElement.style.display = 'block';
+                textElement.textContent = text;
+                
+                statusElement.className = 'connection-status text-white';
+                
+                switch (status) {
+                    case 'connected':
+                        statusElement.classList.add('bg-success');
+                        setTimeout(() => {
+                            statusElement.style.display = 'none';
+                        }, 3000);
+                        break;
+                    case 'disconnected':
+                        statusElement.classList.add('bg-warning');
+                        break;
+                    case 'error':
+                        statusElement.classList.add('bg-danger');
+                        break;
+                    default:
+                        statusElement.classList.add('bg-secondary');
+                }
+            }
+            
+            showLoading(show) {
+                document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+                document.getElementById('lookupBtn').disabled = show;
+            }
+            
+            showError(message) {
+                const errorAlert = document.getElementById('errorAlert');
+                document.getElementById('errorMessage').textContent = message;
+                errorAlert.style.display = 'block';
+                
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    errorAlert.style.display = 'none';
+                }, 5000);
+            }
+            
+            hideError() {
+                document.getElementById('errorAlert').style.display = 'none';
+            }
+            
+            showSuccess(message) {
+                const successAlert = document.getElementById('successAlert');
+                document.getElementById('successMessage').textContent = message;
+                successAlert.style.display = 'block';
+                
+                // Auto-hide after 3 seconds
+                setTimeout(() => {
+                    successAlert.style.display = 'none';
+                }, 3000);
+            }
+            
+            hideSuccess() {
+                document.getElementById('successAlert').style.display = 'none';
+            }
+            
+            clearForm() {
+                document.getElementById('eventCode').value = '';
+                document.getElementById('guestName').value = '';
+                document.getElementById('seatingInfo').style.display = 'none';
+                document.getElementById('liveUpdates').style.display = 'none';
+                
+                if (this.websocket) {
+                    this.websocket.close();
+                    this.websocket = null;
+                }
+                
+                this.eventCode = null;
+                this.guestName = null;
+                this.isCheckedIn = false;
+                
+                this.hideError();
+                this.hideSuccess();
+                
+                // Remove found class
+                document.querySelector('.seating-card').classList.remove('found');
+            }
+        }
+        
+        // Initialize the portal when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new WeddingGuestPortal();
+        });
+        
+        // Send periodic heartbeat to keep WebSocket alive
+        setInterval(() => {
+            if (window.portal && window.portal.websocket && window.portal.websocket.readyState === WebSocket.OPEN) {
+                window.portal.websocket.send(JSON.stringify({
+                    type: 'ping',
+                    timestamp: new Date().toISOString()
+                }));
+            }
+        }, 30000); // Every 30 seconds
+    </script>
+</body>
+</html>
