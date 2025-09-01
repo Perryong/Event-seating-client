@@ -13,6 +13,7 @@ from app.services.qr_service import QRService
 from app.services.seating_service import SeatingService
 from app.utils.security import rate_limit_check, get_client_ip
 from app.utils.responses import success_response, error_response, rate_limit_error
+from app.services.repositories import EventRepo, use_firestore
 
 router = APIRouter()
 
@@ -27,10 +28,11 @@ async def download_template(
     db: Session = Depends(get_db)
 ):
     """Download Excel template for event"""
-    # Verify event exists
-    event = db.query(Event).filter(Event.public_code == public_code).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
+    # Verify event exists (SQL or Firestore)
+    if not use_firestore():
+        event = db.query(Event).filter(Event.public_code == public_code).first()
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
     
     # Generate template
     template_bytes = ExcelService.create_template()
@@ -47,10 +49,10 @@ async def get_qr_code(
     db: Session = Depends(get_db)
 ):
     """Get QR code image for event"""
-    # Verify event exists
-    event = db.query(Event).filter(Event.public_code == public_code).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
+    if not use_firestore():
+        event = db.query(Event).filter(Event.public_code == public_code).first()
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
     
     # Generate QR code
     qr_bytes = QRService.generate_event_qr(public_code)

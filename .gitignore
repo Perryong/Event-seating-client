@@ -1,3 +1,16 @@
+.env
+*.env
+service-account.json
+*.key
+uploads/
+__pycache__/
+.pytest_cache/
+.venv/
+env/
+venv/
+*.sqlite
+*.db
+server.pid
 # Logs
 logs
 *.log

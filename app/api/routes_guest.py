@@ -82,11 +82,11 @@ async def check_in_guest(
         message=message,
         data={
             "guest": {
-                "name": guest.name,
-                "table_name": guest.table_name,
-                "seat_no": guest.seat_no,
-                "dietary": guest.dietary,
-                "checked_in": guest.checked_in
+                "name": getattr(guest, 'name', guest.get('name')),
+                "table_name": getattr(guest, 'table_name', guest.get('table_name')),
+                "seat_no": getattr(guest, 'seat_no', guest.get('seat_no')),
+                "dietary": getattr(guest, 'dietary', guest.get('dietary')),
+                "checked_in": getattr(guest, 'checked_in', guest.get('checked_in', True))
             },
             "was_already_checked_in": was_already_checked_in
         }

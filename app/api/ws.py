@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.models import Event
+from app.services.repositories import EventRepo, use_firestore
 
 logger = logging.getLogger(__name__)
 
@@ -97,11 +98,19 @@ async def websocket_endpoint(
 ):
     """WebSocket endpoint for real-time event updates"""
     
-    # Verify event exists
-    event = db.query(Event).filter(Event.public_code == event_code).first()
-    if not event:
-        await websocket.close(code=4004, reason="Event not found")
-        return
+    # Verify event exists (SQL or Firestore)
+    if not use_firestore():
+        event = db.query(Event).filter(Event.public_code == event_code).first()
+        if not event:
+            await websocket.close(code=4004, reason="Event not found")
+            return
+        event_name = event.name
+    else:
+        event_doc = EventRepo.get_by_public_code_fs(event_code)
+        if not event_doc:
+            await websocket.close(code=4004, reason="Event not found")
+            return
+        event_name = event_doc.get("name", "Event")
     
     # Connect to WebSocket
     await websocket_manager.connect(websocket, event_code)
@@ -110,7 +119,7 @@ async def websocket_endpoint(
         # Send welcome message
         welcome_message = {
             "type": "connection",
-            "message": f"Connected to event: {event.name}",
+            "message": f"Connected to event: {event_name}",
             "event_code": event_code,
             "connection_count": websocket_manager.get_connection_count(event_code)
         }

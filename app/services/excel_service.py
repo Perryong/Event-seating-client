@@ -192,6 +192,69 @@ class ExcelService:
         except Exception as e:
             db.rollback()
             return False, [f"Error processing Excel file: {str(e)}"], 0
+
+    @staticmethod
+    def parse_excel_to_records(file_content: bytes) -> Tuple[bool, List[str], List[Dict[str, Any]]]:
+        """Parse and validate Excel, returning normalized guest records.
+
+        Output guest dict keys: name, name_lower, table_name, seat_no, dietary, checked_in
+        """
+        try:
+            df = pd.read_excel(io.BytesIO(file_content))
+
+            valid_structure, structure_errors = ExcelService.validate_excel_structure(df)
+            if not valid_structure:
+                return False, structure_errors, []
+
+            valid_data, data_errors = ExcelService.validate_data_constraints(df)
+            if not valid_data:
+                return False, data_errors, []
+
+            # Create column mapping
+            column_mapping: Dict[str, str] = {}
+            for col in df.columns:
+                col_lower = col.lower().strip()
+                if 'name' in col_lower:
+                    column_mapping['name'] = col
+                elif 'table' in col_lower:
+                    column_mapping['table'] = col
+                elif 'seat' in col_lower:
+                    column_mapping['seat'] = col
+                elif 'dietary' in col_lower:
+                    column_mapping['dietary'] = col
+
+            records: List[Dict[str, Any]] = []
+            for _, row in df.iterrows():
+                if pd.isna(row[column_mapping['name']]) or str(row[column_mapping['name']]).strip() == '':
+                    continue
+
+                table_name = str(row[column_mapping['table']]).strip()
+                dietary = str(row[column_mapping['dietary']]).lower().strip()
+                if dietary in ['', 'nan', 'none']:
+                    dietary = 'none'
+                elif dietary in ['vegetarian', 'veg']:
+                    dietary = 'vegetarian'
+                elif dietary in ['halal']:
+                    dietary = 'halal'
+                elif 'allerg' in dietary:
+                    dietary = f"allergies:{dietary}"
+
+                name = str(row[column_mapping['name']]).strip()
+                seat_no = int(row[column_mapping['seat']])
+
+                records.append({
+                    'name': name,
+                    'name_lower': name.lower(),
+                    'table_name': table_name,
+                    'seat_no': seat_no,
+                    'dietary': dietary,
+                    'checked_in': False
+                })
+
+            return True, [], records
+
+        except Exception as e:
+            return False, [f"Error parsing Excel file: {str(e)}"], []
     
     @staticmethod
     def export_current_data(event_id: int, db: Session, include_checkin: bool = True) -> bytes:

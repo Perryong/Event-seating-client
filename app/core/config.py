@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./wedding_seating.db")
+    USE_FIREBASE: bool = os.getenv("USE_FIREBASE", "false").lower() in ("1", "true", "yes")
+    FIREBASE_CREDENTIALS_JSON: str | None = os.getenv("FIREBASE_CREDENTIALS_JSON")
+    FIREBASE_CREDENTIALS_FILE: str | None = os.getenv("FIREBASE_CREDENTIALS_FILE")
+    FIREBASE_CREDENTIALS_B64: str | None = os.getenv("FIREBASE_CREDENTIALS_B64")
     
     # Security
     ADMIN_TOKEN: str = os.getenv("ADMIN_TOKEN", "admin_token_123")

@@ -26,7 +26,7 @@ A production-ready FastAPI backend for managing wedding seating arrangements wit
 
 ### Environment Setup
 
-Create a `.env` file with the following variables:
+Create a `.env` file with the following variables (Firebase optional):
 
 ```env
 # Database (optional - defaults to SQLite)
@@ -37,6 +37,19 @@ ADMIN_TOKEN=your_secure_admin_token_here
 
 # Application
 BASE_URL=http://localhost:8000
+
+# Storage selection
+USE_FIREBASE=false
+
+# Firebase credentials (choose ONE method)
+# 1) Path to service account JSON (recommended locally)
+# FIREBASE_CREDENTIALS_FILE=C:\\path\\to\\service-account.json
+
+# 2) Raw JSON string (escape newlines in private_key)
+# FIREBASE_CREDENTIALS_JSON={"type":"service_account","project_id":"...","private_key_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n","client_email":"...","client_id":"...","token_uri":"https://oauth2.googleapis.com/token"}
+
+# 3) Base64-encoded JSON
+# FIREBASE_CREDENTIALS_B64=
 
 # CORS (optional - has sensible defaults)
 ALLOW_ORIGINS=["http://localhost:3000", "http://localhost:5000"]
