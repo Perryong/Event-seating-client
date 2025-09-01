@@ -4,11 +4,14 @@ Configuration settings for the application
 
 import os
 from typing import List
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """Application settings"""
-    
+
+    # Accept extra .env keys (e.g., FIREBASE_* client keys) without validation errors
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./wedding_seating.db")
     USE_FIREBASE: bool = os.getenv("USE_FIREBASE", "false").lower() in ("1", "true", "yes")
@@ -37,7 +40,4 @@ class Settings(BaseSettings):
     # Rate limiting
     RATE_LIMIT_PER_MINUTE: int = 30
     
-    class Config:
-        env_file = ".env"
-
 settings = Settings()
